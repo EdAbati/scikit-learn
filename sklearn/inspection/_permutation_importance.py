@@ -57,7 +57,7 @@ def _calculate_permutation_scores(
         if sample_weight is not None:
             sample_weight = _safe_indexing(sample_weight, row_indices, axis=0)
     else:
-        X_permuted = X.copy()
+        X_permuted = X
 
     scores = []
     shuffling_idx = np.arange(X_permuted.shape[0])
@@ -262,7 +262,11 @@ def permutation_importance(
     >>> result.importances_std
     array([0.2211..., 0.       , 0.       ])
     """
-    if not hasattr(X, "iloc"):
+    import narwhals as nw
+
+    try:
+        X = nw.from_native(X)
+    except TypeError:
         X = check_array(X, force_all_finite="allow-nan", dtype=None)
 
     # Precompute random seed from the random state to be used
