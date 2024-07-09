@@ -57,16 +57,17 @@ def _calculate_permutation_scores(
         if sample_weight is not None:
             sample_weight = _safe_indexing(sample_weight, row_indices, axis=0)
     else:
-        X_permuted = X
+        X_permuted = X.clone()
 
     scores = []
     shuffling_idx = np.arange(X_permuted.shape[0])
     for _ in range(n_repeats):
         random_state.shuffle(shuffling_idx)
-        if hasattr(X_permuted, "iloc"):
-            col = X_permuted.iloc[shuffling_idx, col_idx]
-            col.index = X_permuted.index
-            X_permuted[X_permuted.columns[col_idx]] = col
+        if hasattr(X_permuted, "columns"):
+            # TODO there is something wrong with the indexing
+            col = X_permuted[shuffling_idx, col_idx]
+            col_name = X_permuted.columns[col_idx]
+            X_permuted = X_permuted.with_columns(col.alias(col_name))
         else:
             X_permuted[:, col_idx] = X_permuted[shuffling_idx, col_idx]
         scores.append(_weights_scorer(scorer, estimator, X_permuted, y, sample_weight))
