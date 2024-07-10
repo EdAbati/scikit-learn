@@ -2,6 +2,7 @@
 
 import numbers
 
+import narwhals as nw
 import numpy as np
 
 from ..ensemble._bagging import _generate_indices
@@ -63,11 +64,16 @@ def _calculate_permutation_scores(
     shuffling_idx = np.arange(X_permuted.shape[0])
     for _ in range(n_repeats):
         random_state.shuffle(shuffling_idx)
-        if hasattr(X_permuted, "columns"):
-            # TODO there is something wrong with the indexing
-            col = X_permuted[shuffling_idx, col_idx]
-            col_name = X_permuted.columns[col_idx]
-            X_permuted = X_permuted.with_columns(col.alias(col_name))
+        if isinstance(X_permuted, nw.DataFrame):
+            # TODO change with the below code
+            X_permuted = X_permuted.to_pandas()
+            col = X_permuted.iloc[shuffling_idx, col_idx]
+            col.index = X_permuted.index
+            X_permuted[X_permuted.columns[col_idx]] = col
+            X_permuted = nw.from_native(X_permuted)
+            # col_name = X_permuted.columns[col_idx]
+            # new_col =  X_permuted.get_column(col_name)[shuffling_idx]
+            # X_permuted = X_permuted.replace_column(col_idx, new_col)
         else:
             X_permuted[:, col_idx] = X_permuted[shuffling_idx, col_idx]
         scores.append(_weights_scorer(scorer, estimator, X_permuted, y, sample_weight))
@@ -263,10 +269,9 @@ def permutation_importance(
     >>> result.importances_std
     array([0.2211..., 0.       , 0.       ])
     """
-    import narwhals as nw
 
     try:
-        X = nw.from_native(X)
+        X = nw.from_native(X, eager_only=True)
     except TypeError:
         X = check_array(X, force_all_finite="allow-nan", dtype=None)
 
