@@ -1,6 +1,7 @@
 """Permutation importance for estimators."""
 
 import numbers
+import warnings
 
 import narwhals as nw
 import numpy as np
@@ -24,6 +25,14 @@ def _weights_scorer(scorer, estimator, X, y, sample_weight):
     if sample_weight is not None:
         return scorer(estimator, X, y, sample_weight=sample_weight)
     return scorer(estimator, X, y)
+
+
+def _replace_column(df: nw.DataFrame, index: int, column: nw.Series):
+    col_name = df.columns[index]
+    out_columns = [
+        col if col != col_name else column.alias(col_name) for col in df.columns
+    ]
+    return df.select(out_columns).rename({col_name: column.name})
 
 
 def _calculate_permutation_scores(
@@ -65,15 +74,8 @@ def _calculate_permutation_scores(
     for _ in range(n_repeats):
         random_state.shuffle(shuffling_idx)
         if isinstance(X_permuted, nw.DataFrame):
-            # TODO change with the below code
-            X_permuted = X_permuted.to_pandas()
-            col = X_permuted.iloc[shuffling_idx, col_idx]
-            col.index = X_permuted.index
-            X_permuted[X_permuted.columns[col_idx]] = col
-            X_permuted = nw.from_native(X_permuted)
-            # col_name = X_permuted.columns[col_idx]
-            # new_col =  X_permuted.get_column(col_name)[shuffling_idx]
-            # X_permuted = X_permuted.replace_column(col_idx, new_col)
+            shuffled_col = X_permuted[shuffling_idx, col_idx]
+            X_permuted = _replace_column(X_permuted, col_idx, column=shuffled_col)
         else:
             X_permuted[:, col_idx] = X_permuted[shuffling_idx, col_idx]
         scores.append(_weights_scorer(scorer, estimator, X_permuted, y, sample_weight))
@@ -272,6 +274,11 @@ def permutation_importance(
 
     try:
         X = nw.from_native(X, eager_only=True)
+        if any(not isinstance(c, str) for c in X.columns):
+            warnings.warn(
+                "Columns will be renamed to strings for permutation_importance."
+            )
+            X = X.rename({i: str(i) for i in X.columns})
     except TypeError:
         X = check_array(X, force_all_finite="allow-nan", dtype=None)
 

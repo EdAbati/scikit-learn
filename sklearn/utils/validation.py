@@ -2247,10 +2247,6 @@ def _get_feature_names(X):
 
     import narwhals as nw
 
-    # TODO REMOVE
-    print("HEY")
-    print(type(X))
-
     X = nw.from_native(X, strict=False, eager_only=True)
     if isinstance(X, nw.DataFrame):
         feature_names = np.asarray(X.columns, dtype=object)
