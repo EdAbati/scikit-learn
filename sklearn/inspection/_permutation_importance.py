@@ -70,7 +70,10 @@ def _calculate_permutation_scores(
         if sample_weight is not None:
             sample_weight = _safe_indexing(sample_weight, row_indices, axis=0)
     else:
-        X_permuted = X.clone()
+        if isinstance(X, nw.DataFrame):
+            X_permuted = X.clone()
+        else:
+            X_permuted = X.copy()
 
     scores = []
     shuffling_idx = np.arange(X_permuted.shape[0])
