@@ -12,6 +12,7 @@ from functools import reduce, wraps
 from inspect import Parameter, isclass, signature
 
 import joblib
+import narwhals as nw
 import numpy as np
 import scipy.sparse as sp
 
@@ -2244,8 +2245,6 @@ def _get_feature_names(X):
         Feature names of `X`. Unrecognized array containers will return `None`.
     """
     feature_names = None
-
-    import narwhals as nw
 
     X = nw.from_native(X, strict=False, eager_only=True)
     if isinstance(X, nw.DataFrame):
